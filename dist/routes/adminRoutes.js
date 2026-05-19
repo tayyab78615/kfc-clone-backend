@@ -1,0 +1,21 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const cloudinary_1 = require("../config/cloudinary");
+const adminController_1 = require("../controllers/adminController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const router = express_1.default.Router();
+router.use(authMiddleware_1.protect, authMiddleware_1.adminOnly);
+router.get("/users", adminController_1.getAdminUsers);
+router.put("/users/:id", adminController_1.updateAdminUser);
+router.get("/menu", adminController_1.getAdminMenuItems);
+router.post("/menu", cloudinary_1.upload.single("image"), adminController_1.createAdminMenuItem);
+router.put("/menu/:id", cloudinary_1.upload.single("image"), adminController_1.updateAdminMenuItem);
+router.delete("/menu/:id", adminController_1.deleteAdminMenuItem);
+router.get("/orders", authMiddleware_1.superAdminOnly, adminController_1.getAllOrdersForSuperAdmin);
+router.put("/orders/:userId/:orderId", authMiddleware_1.superAdminOnly, adminController_1.updateOrderForSuperAdmin);
+router.delete("/orders/:userId/:orderId", authMiddleware_1.superAdminOnly, adminController_1.deleteOrderForSuperAdmin);
+exports.default = router;
