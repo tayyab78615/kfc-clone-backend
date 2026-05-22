@@ -18,7 +18,7 @@ const protect = async (req, res, next) => {
     }
     try {
         const decoded = jsonwebtoken_1.default.verify(token, secret);
-        const user = await User_1.default.findById(decoded.id).select("_id role");
+        const user = await User_1.default.findById(decoded.id).select("_id role").lean();
         if (!user) {
             return res.status(401).json({ message: "Not authorized, user not found" });
         }

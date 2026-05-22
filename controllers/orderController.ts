@@ -106,7 +106,7 @@ export const getMyOrders = async (
       return res.status(401).json({ message: "Not authorized" });
     }
 
-    const user = await User.findById(req.userId).select("orders");
+    const user = await User.findById(req.userId).select("orders").lean();
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -132,7 +132,9 @@ export const trackOrder = async (req: Request, res: Response) => {
 
     const upperId = orderId.toUpperCase();
 
-    const user = await User.findOne({ "orders.orderId": upperId });
+    const user = await User.findOne({ "orders.orderId": upperId })
+      .select({ "orders.$": 1 })
+      .lean();
     if (!user) {
       return res.status(404).json({ message: "Order not found" });
     }

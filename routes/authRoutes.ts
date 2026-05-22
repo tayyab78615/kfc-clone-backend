@@ -4,7 +4,11 @@ import {
   login,
   refresh,
   logout,
+  addAddress,
+  getAddresses,
+  deleteAddress,
 } from "../controllers/authController";
+import { protect } from "../middleware/authMiddleware";
 
 const router = express.Router();
 
@@ -16,5 +20,10 @@ router.post("/login", login);
 router.post("/refresh", refresh);
 //This route logs out the user by clearing the refresh token
 router.post("/logout", logout);
+
+// Delivery address endpoints
+router.post("/address", protect, addAddress);
+router.get("/addresses", protect, getAddresses);
+router.delete("/address/:id", protect, deleteAddress);
 
 export default router;

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logout = exports.refresh = exports.login = exports.signup = void 0;
+exports.deleteAddress = exports.getAddresses = exports.addAddress = exports.logout = exports.refresh = exports.login = exports.signup = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -82,6 +82,7 @@ const buildAuthResponse = (user) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        addresses: user.addresses || [],
         accessToken: generateAccessToken(String(user._id)),
     };
 };
@@ -143,7 +144,7 @@ const refresh = async (req, res) => {
     }
     try {
         const decoded = jsonwebtoken_1.default.verify(refreshToken, secret);
-        const user = await User_1.default.findById(decoded.id);
+        const user = await User_1.default.findById(decoded.id).lean();
         if (!user || !user.refreshToken) {
             clearRefreshTokenCookie(res);
             return res.status(401).json({ message: "Invalid refresh token" });
@@ -165,8 +166,6 @@ const refresh = async (req, res) => {
     }
 };
 exports.refresh = refresh;
-
-// logout user
 const logout = async (req, res) => {
     const refreshToken = getRefreshTokenFromRequest(req);
     const secret = getRefreshSecret();
@@ -183,3 +182,77 @@ const logout = async (req, res) => {
     return res.json({ message: "Logged out successfully" });
 };
 exports.logout = logout;
+const addAddress = async (req, res) => {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ message: "Not authorized" });
+        }
+        const { id, type, locationName, latitude, longitude, house, street, landmark } = req.body;
+        if (!id || !type || !locationName || !house || !street || !landmark) {
+            return res.status(400).json({ message: "Missing required address fields" });
+        }
+        const newAddress = {
+            id,
+            type,
+            locationName,
+            latitude,
+            longitude,
+            house,
+            street,
+            landmark,
+        };
+        const user = await User_1.default.findByIdAndUpdate(req.userId, { $push: { addresses: { $each: [newAddress], $position: 0 } } }, { new: true, projection: { addresses: 1 } }).lean();
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        return res.status(200).json({
+            message: "Address added successfully",
+            addresses: user.addresses,
+        });
+    }
+    catch (error) {
+        return res.status(500).json({ message: getErrorMessage(error) });
+    }
+};
+exports.addAddress = addAddress;
+const getAddresses = async (req, res) => {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ message: "Not authorized" });
+        }
+        const user = await User_1.default.findById(req.userId).select("addresses").lean();
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        return res.status(200).json({
+            addresses: user.addresses || [],
+        });
+    }
+    catch (error) {
+        return res.status(500).json({ message: getErrorMessage(error) });
+    }
+};
+exports.getAddresses = getAddresses;
+const deleteAddress = async (req, res) => {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ message: "Not authorized" });
+        }
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ message: "Address ID is required" });
+        }
+        const user = await User_1.default.findByIdAndUpdate(req.userId, { $pull: { addresses: { id } } }, { new: true, projection: { addresses: 1 } }).lean();
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        return res.status(200).json({
+            message: "Address deleted successfully",
+            addresses: user.addresses,
+        });
+    }
+    catch (error) {
+        return res.status(500).json({ message: getErrorMessage(error) });
+    }
+};
+exports.deleteAddress = deleteAddress;

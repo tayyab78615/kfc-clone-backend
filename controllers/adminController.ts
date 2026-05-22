@@ -66,21 +66,21 @@ const normalizeMenuPayload = (
 
 export const getAdminUsers = async (_req: Request, res: Response) => {
   try {
-    const users = await User.find()
-      .select("name email role createdAt updatedAt orders")
-      .sort({ createdAt: -1 });
+    const users = await User.aggregate([
+      { $sort: { createdAt: -1 } },
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          role: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          totalOrders: { $size: { $ifNull: ["$orders", []] } },
+        },
+      },
+    ]);
 
-    return res.json({
-      users: users.map((user) => ({
-        _id: String(user._id),
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        totalOrders: user.orders.length,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      })),
-    });
+    return res.json({ users });
   } catch (error) {
     return res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -269,44 +269,40 @@ export const getAllOrdersForSuperAdmin = async (req: Request, res: Response) => 
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
-
-    const users = await User.find()
-      .select("name email orders")
-      .sort({ createdAt: -1 });
-
-    const allOrders = users.flatMap((user) =>
-      user.orders.map((order) => ({
-        _id: String(order._id),
-        userId: String(user._id),
-        userName: user.name,
-        userEmail: user.email,
-        orderId: order.orderId,
-        items: order.items.map((item) => ({
-          _id: String(item._id),
-          productId: item.productId,
-          name: item.name,
-          unitPrice: item.unitPrice,
-          quantity: item.quantity,
-          image: item.image,
-        })),
-        totalItems: order.totalItems,
-        totalAmount: order.totalAmount,
-        paymentMode: order.paymentMode,
-        status: order.status,
-        deliveryAddress: order.deliveryAddress,
-        customerInfo: order.customerInfo,
-        createdAt: order.createdAt,
-      })),
-    );
-
-    allOrders.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-
-    const total = allOrders.length;
     const skip = (page - 1) * limit;
-    const orders = allOrders.slice(skip, skip + limit);
+    const [result] = await User.aggregate([
+      { $unwind: "$orders" },
+      { $sort: { "orders.createdAt": -1, "orders._id": -1 } },
+      {
+        $facet: {
+          orders: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                _id: { $toString: "$orders._id" },
+                userId: { $toString: "$_id" },
+                userName: "$name",
+                userEmail: "$email",
+                orderId: "$orders.orderId",
+                items: "$orders.items",
+                totalItems: "$orders.totalItems",
+                totalAmount: "$orders.totalAmount",
+                paymentMode: "$orders.paymentMode",
+                status: "$orders.status",
+                deliveryAddress: "$orders.deliveryAddress",
+                customerInfo: "$orders.customerInfo",
+                createdAt: "$orders.createdAt",
+              },
+            },
+          ],
+          metadata: [{ $count: "total" }],
+        },
+      },
+    ]);
+
+    const orders = result?.orders ?? [];
+    const total = result?.metadata?.[0]?.total ?? 0;
 
     return res.json({
       orders,
@@ -433,7 +429,7 @@ export const getAdminMenuItems = async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
 
     const [items, total] = await Promise.all([
-      MenuItem.find().sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit),
+      MenuItem.find().sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit).lean(),
       MenuItem.countDocuments(),
     ]);
 
@@ -524,42 +520,33 @@ export const deleteAdminMenuItem = async (req: Request, res: Response) => {
 
 export const getSalesSummary = async (_req: Request, res: Response) => {
   try {
-    const users = await User.find().select("orders");
-
-    const salesMap = new Map<string, { name: string; totalSold: number; lastSoldAt: string | null }>();
-
-
-    //Each user likely has multiple orders.
-    for (const user of users) {
-      for (const order of user.orders) {
-
-        //Each order contains an array of items.
-        for (const item of order.items) {
-
-          //Check if Product Already Exists in Map
-          const existing = salesMap.get(item.productId);
-
-          //If product exists, update the total sold and last sold at
-          if (existing) {
-            existing.totalSold += item.quantity;
-
-            //Update Last Sold Date (if newer)
-            if (!existing.lastSoldAt || new Date(order.createdAt) > new Date(existing.lastSoldAt)) {
-              existing.lastSoldAt = order.createdAt.toISOString();
-            }
-          } else {
-            //If product does not exist, add it to the map
-            salesMap.set(item.productId, {
-              name: item.name,
-              totalSold: item.quantity,
-              lastSoldAt: order.createdAt.toISOString(),
-            });
-          }
-        }
-      }
-    }
-
-    const summary = Array.from(salesMap.values()).sort((a, b) => b.totalSold - a.totalSold);
+    const summary = await User.aggregate([
+      { $unwind: "$orders" },
+      { $unwind: "$orders.items" },
+      {
+        $group: {
+          _id: "$orders.items.productId",
+          name: { $first: "$orders.items.name" },
+          totalSold: { $sum: "$orders.items.quantity" },
+          lastSoldAt: { $max: "$orders.createdAt" },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      {
+        $project: {
+          _id: 0,
+          name: 1,
+          totalSold: 1,
+          lastSoldAt: {
+            $dateToString: {
+              date: "$lastSoldAt",
+              format: "%Y-%m-%dT%H:%M:%S.%LZ",
+              timezone: "UTC",
+            },
+          },
+        },
+      },
+    ]);
 
     return res.json({ summary, fetchedAt: new Date().toISOString() });
   } catch (error) {
@@ -569,39 +556,34 @@ export const getSalesSummary = async (_req: Request, res: Response) => {
 
 export const getBestSellingItems = async (_req: Request, res: Response) => {
   try {
-    const users = await User.find().select("orders");
+    const aggregatedBestSellers = await User.aggregate([
+      { $unwind: "$orders" },
+      { $unwind: "$orders.items" },
+      {
+        $group: {
+          _id: "$orders.items.productId",
+          productId: { $first: "$orders.items.productId" },
+          name: { $first: "$orders.items.name" },
+          image: { $first: "$orders.items.image" },
+          unitPrice: { $first: "$orders.items.unitPrice" },
+          totalSold: { $sum: "$orders.items.quantity" },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      {
+        $project: {
+          _id: 0,
+          productId: 1,
+          name: 1,
+          image: 1,
+          unitPrice: 1,
+          totalSold: 1,
+        },
+      },
+    ]);
 
-    // Map: productId → { name, image, unitPrice, totalSold }
-    const salesMap = new Map<
-      string,
-      { productId: string; name: string; image: string; unitPrice: string; totalSold: number }
-    >();
+    return res.json({ bestSellers: aggregatedBestSellers, fetchedAt: new Date().toISOString() });
 
-    for (const user of users) {
-      for (const order of user.orders) {
-        for (const item of order.items) {
-          const existing = salesMap.get(item.productId);
-          if (existing) {
-            existing.totalSold += item.quantity;
-          } else {
-            salesMap.set(item.productId, {
-              productId: item.productId,
-              name: item.name,
-              image: item.image,
-              unitPrice: item.unitPrice,
-              totalSold: item.quantity,
-            });
-          }
-        }
-      }
-    }
-
-    // Sort by most sold, descending
-    const bestSellers = Array.from(salesMap.values()).sort(
-      (a, b) => b.totalSold - a.totalSold,
-    );
-
-    return res.json({ bestSellers, fetchedAt: new Date().toISOString() });
   } catch (error) {
     return res.status(500).json({ message: getErrorMessage(error) });
   }

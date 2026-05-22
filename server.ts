@@ -8,7 +8,9 @@ import authRoutes from "./routes/authRoutes";
 import menuRoutes from "./routes/menuRoutes";
 import orderRoutes from "./routes/orderRoutes";
 import adminRoutes from "./routes/adminRoutes";
+import favoriteRoutes from "./routes/favoriteRoutes";
 import recommendationRoutes from "./routes/recommendationRoutes"; // ← NEW
+import branchRoutes from "./routes/branchRoutes";
 
 connectDB();
 
@@ -28,7 +30,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/favorites", favoriteRoutes);
 app.use("/api/recommendations", recommendationRoutes); // ← NEW
+app.use("/api/branches", branchRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

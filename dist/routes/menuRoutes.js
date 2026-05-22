@@ -11,7 +11,7 @@ const getErrorMessage = (error) => {
 };
 router.get("/", async (_req, res) => {
     try {
-        const items = await MenuItem_1.default.find();
+        const items = await MenuItem_1.default.find().sort({ createdAt: -1, _id: -1 }).lean();
         return res.json(items);
     }
     catch (err) {

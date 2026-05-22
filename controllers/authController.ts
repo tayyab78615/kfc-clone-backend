@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import User from "../models/User";
 import bcrypt from "bcryptjs";
 import jwt, { type SignOptions } from "jsonwebtoken";
+import type { AuthenticatedRequest } from "../middleware/authMiddleware";
 
 interface AuthRequestBody {
   name?: string;
@@ -102,12 +103,14 @@ const buildAuthResponse = (user: {
   name: string;
   email: string;
   role: "user" | "admin" | "superadmin";
+  addresses?: any[];
 }) => {
   return {
     _id: String(user._id),
     name: user.name,
     email: user.email,
     role: user.role,
+    addresses: user.addresses || [],
     accessToken: generateAccessToken(String(user._id)),
   };
 };
@@ -185,7 +188,7 @@ export const refresh = async (req: Request, res: Response) => {
 
   try {
     const decoded = jwt.verify(refreshToken, secret) as TokenPayload;
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).lean();
 
     if (!user || !user.refreshToken) {
       clearRefreshTokenCookie(res);
@@ -225,4 +228,98 @@ export const logout = async (req: Request, res: Response) => {
 
   clearRefreshTokenCookie(res);
   return res.json({ message: "Logged out successfully" });
+};
+
+export const addAddress = async (
+  req: AuthenticatedRequest<any, any, any>,
+  res: Response,
+) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const { id, type, locationName, latitude, longitude, house, street, landmark } = req.body;
+
+    if (!id || !type || !locationName || !house || !street || !landmark) {
+      return res.status(400).json({ message: "Missing required address fields" });
+    }
+
+    const newAddress = {
+      id,
+      type,
+      locationName,
+      latitude,
+      longitude,
+      house,
+      street,
+      landmark,
+    };
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { $push: { addresses: { $each: [newAddress], $position: 0 } } },
+      { new: true, projection: { addresses: 1 } },
+    ).lean();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "Address added successfully",
+      addresses: user.addresses,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const getAddresses = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const user = await User.findById(req.userId).select("addresses").lean();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      addresses: user.addresses || [],
+    });
+  } catch (error) {
+    return res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const deleteAddress = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ message: "Address ID is required" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { $pull: { addresses: { id } } },
+      { new: true, projection: { addresses: 1 } },
+    ).lean();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "Address deleted successfully",
+      addresses: user.addresses,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: getErrorMessage(error) });
+  }
 };

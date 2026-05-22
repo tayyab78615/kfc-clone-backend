@@ -4,10 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const orderController_1 = require("../controllers/orderController");
+const recommendationController_1 = require("../controllers/recommendationController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = express_1.default.Router();
-router.post("/", authMiddleware_1.protect, orderController_1.createOrder);
-router.get("/my", authMiddleware_1.protect, orderController_1.getMyOrders);
-router.get("/track/:orderId", orderController_1.trackOrder);
+// POST /api/recommendations
+// Body: { currentCartIds: string[] }
+// Returns: { recommendations: MenuItem[] }
+router.post("/", authMiddleware_1.protect, recommendationController_1.getRecommendations);
 exports.default = router;

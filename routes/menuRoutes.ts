@@ -9,7 +9,7 @@ const getErrorMessage = (error: unknown) => {
 
 router.get("/", async (_req: Request, res: Response) => {
   try {
-    const items = await MenuItem.find();
+    const items = await MenuItem.find().sort({ createdAt: -1, _id: -1 }).lean();
     return res.json(items);
   } catch (err) {
     return res.status(500).json({ error: getErrorMessage(err) });

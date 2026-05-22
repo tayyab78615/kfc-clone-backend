@@ -36,7 +36,7 @@ export const protect = async (
 
   try {
     const decoded = jwt.verify(token, secret) as TokenPayload;
-    const user = await User.findById(decoded.id).select("_id role");
+    const user = await User.findById(decoded.id).select("_id role").lean();
 
     if (!user) {
       return res.status(401).json({ message: "Not authorized, user not found" });

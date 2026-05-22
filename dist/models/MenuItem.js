@@ -24,5 +24,7 @@ const menuItemSchema = new mongoose_1.default.Schema({
         required: true,
     },
 }, { timestamps: true });
+menuItemSchema.index({ category: 1 });
+menuItemSchema.index({ createdAt: -1, _id: -1 });
 const MenuItem = mongoose_1.default.model("MenuItem", menuItemSchema);
 exports.default = MenuItem;

@@ -37,6 +37,28 @@ interface Order {
   createdAt: Date;
 }
 
+interface FavoriteItem {
+  _id?: mongoose.Types.ObjectId;
+  productId: string;
+  name: string;
+  price: string;
+  image: string;
+  desc?: string;
+  category?: string;
+  createdAt: Date;
+}
+
+export interface DeliveryAddress {
+  id: string;
+  type: "home" | "office";
+  locationName: string;
+  latitude: number;
+  longitude: number;
+  house: string;
+  street: string;
+  landmark: string;
+}
+
 export interface IUser extends mongoose.Document {
   name: string;
   email: string;
@@ -45,6 +67,8 @@ export interface IUser extends mongoose.Document {
   refreshToken?: string;
   bucket: BucketItem[];
   orders: Order[];
+  favorites: FavoriteItem[];
+  addresses: DeliveryAddress[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -114,9 +138,41 @@ const userSchema = new mongoose.Schema<IUser>(
         },
       },
     ],
+    favorites: [
+      {
+        productId: String,
+        name: String,
+        price: String,
+        image: String,
+        desc: String,
+        category: String,
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    addresses: [
+      {
+        id: String,
+        type: {
+          type: String,
+          enum: ["home", "office"],
+        },
+        locationName: String,
+        latitude: Number,
+        longitude: Number,
+        house: String,
+        street: String,
+        landmark: String,
+      },
+    ],
   },
   { timestamps: true },
 );
+
+userSchema.index({ "orders.createdAt": -1 });
+userSchema.index({ "favorites.productId": 1 });
 
 const User = mongoose.model<IUser>("User", userSchema);
 export default User;
