@@ -45,7 +45,7 @@ const userSchema = new mongoose_1.default.Schema({
             },
             status: {
                 type: String,
-                enum: ["pending", "paid"],
+                enum: ["pending", "paid", "completed", "cancelled"],
                 default: "paid",
             },
             orderId: {

@@ -17,13 +17,15 @@ interface OrderItem {
   image: string;
 }
 
+export type OrderStatus = "pending" | "paid" | "completed" | "cancelled";
+
 interface Order {
   _id?: mongoose.Types.ObjectId;
   items: OrderItem[];
   totalItems: number;
   totalAmount: number;
   paymentMode: "online" | "jazzcash";
-  status: "pending" | "paid";
+  status: OrderStatus;
   orderId: string;
   deliveryAddress: {
     house: string;
@@ -115,7 +117,7 @@ const userSchema = new mongoose.Schema<IUser>(
         },
         status: {
           type: String,
-          enum: ["pending", "paid"],
+          enum: ["pending", "paid", "completed", "cancelled"],
           default: "paid",
         },
         orderId: {

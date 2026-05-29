@@ -36,4 +36,5 @@ app.use("/api/branches", branchRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+  console.log("Order statuses enabled: pending, paid, completed, cancelled");
 });

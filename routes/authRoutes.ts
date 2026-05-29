@@ -7,6 +7,7 @@ import {
   addAddress,
   getAddresses,
   deleteAddress,
+  updateName,
 } from "../controllers/authController";
 import { protect } from "../middleware/authMiddleware";
 
@@ -25,5 +26,7 @@ router.post("/logout", logout);
 router.post("/address", protect, addAddress);
 router.get("/addresses", protect, getAddresses);
 router.delete("/address/:id", protect, deleteAddress);
+
+router.patch("/name", protect, updateName);
 
 export default router;

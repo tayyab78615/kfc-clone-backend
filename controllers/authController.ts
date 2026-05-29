@@ -323,3 +323,34 @@ export const deleteAddress = async (req: AuthenticatedRequest, res: Response) =>
     return res.status(500).json({ message: getErrorMessage(error) });
   }
 };
+
+export const updateName = async (
+  req: AuthenticatedRequest<any, any, { name: string }>,
+  res: Response,
+) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const { name } = req.body;
+    if (!name || name.trim().length < 2) {
+      return res.status(400).json({ message: "Name must be at least 2 characters" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { name: name.trim() },
+      { new: true, select: "name" },
+    ).lean();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ name: user.name });
+  } catch (error) {
+    return res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+

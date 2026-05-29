@@ -9,6 +9,7 @@ const adminController_1 = require("../controllers/adminController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = express_1.default.Router();
 router.get("/best-sellers", adminController_1.getBestSellingItems);
+router.get("/status-values", adminController_1.getOrderStatusValues);
 router.use(authMiddleware_1.protect, authMiddleware_1.adminOnly);
 router.get("/users", adminController_1.getAdminUsers);
 router.put("/users/:id", adminController_1.updateAdminUser);

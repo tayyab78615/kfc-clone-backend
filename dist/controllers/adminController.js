@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getBestSellingItems = exports.getSalesSummary = exports.deleteAdminMenuItem = exports.updateAdminMenuItem = exports.createAdminMenuItem = exports.getAdminMenuItems = exports.deleteOrderForSuperAdmin = exports.updateOrderForSuperAdmin = exports.getAllOrdersForSuperAdmin = exports.updateAdminUser = exports.getAdminUsers = void 0;
+exports.getBestSellingItems = exports.getSalesSummary = exports.deleteAdminMenuItem = exports.updateAdminMenuItem = exports.createAdminMenuItem = exports.getAdminMenuItems = exports.deleteOrderForSuperAdmin = exports.updateOrderForSuperAdmin = exports.getAllOrdersForSuperAdmin = exports.updateAdminUser = exports.getAdminUsers = exports.getOrderStatusValues = void 0;
 const MenuItem_1 = __importDefault(require("../models/MenuItem"));
 const User_1 = __importDefault(require("../models/User"));
 const validCategories = [
@@ -19,6 +19,29 @@ const validCategories = [
 const getErrorMessage = (error) => {
     return error instanceof Error ? error.message : "Something went wrong";
 };
+const normalizeOrderStatus = (status) => {
+    if (typeof status !== "string")
+        return null;
+    const s = status.trim().toLowerCase();
+    const aliases = {
+        pending: "pending",
+        paid: "paid",
+        complete: "completed",
+        completed: "completed",
+        competed: "completed",
+        canceled: "cancelled",
+        cancelled: "cancelled",
+    };
+    return aliases[s] ?? null;
+};
+const getOrderStatusValues = (_req, res) => {
+    return res.json({
+        source: "adminController",
+        allowedStatuses: ["pending", "paid", "completed", "cancelled"],
+        acceptedAliases: ["complete", "completed", "competed", "canceled", "cancelled"],
+    });
+};
+exports.getOrderStatusValues = getOrderStatusValues;
 const parsePriceAmount = (value) => {
     const normalized = value.replace(/[^0-9.-]/g, "");
     if (!normalized) {
@@ -249,12 +272,17 @@ const updateOrderForSuperAdmin = async (req, res) => {
         if (paymentMode && !["online", "jazzcash"].includes(paymentMode)) {
             return res.status(400).json({ message: "Invalid payment mode" });
         }
-        if (status && !["pending", "paid"].includes(status)) {
-            return res.status(400).json({ message: "Invalid order status" });
+        const normalizedStatus = status === undefined ? undefined : normalizeOrderStatus(status);
+        if (status !== undefined && !normalizedStatus) {
+            return res.status(400).json({
+                message: "Invalid order status",
+                receivedStatus: status,
+                allowedStatuses: ["pending", "paid", "completed", "cancelled"],
+            });
         }
         order.items = normalized.data;
         order.paymentMode = paymentMode ?? order.paymentMode;
-        order.status = status ?? order.status;
+        order.status = normalizedStatus ?? order.status;
         const totals = calculateOrderTotals(normalized.data);
         order.totalItems = totals.totalItems;
         order.totalAmount = totals.totalAmount;

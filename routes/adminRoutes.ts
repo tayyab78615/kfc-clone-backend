@@ -8,6 +8,7 @@ import {
   getAdminUsers,
   getAllOrdersForSuperAdmin,
   getBestSellingItems,
+  getOrderStatusValues,
   getSalesSummary,
   updateAdminMenuItem,
   updateOrderForSuperAdmin,
@@ -18,6 +19,7 @@ import { adminOnly, protect, superAdminOnly } from "../middleware/authMiddleware
 const router = express.Router();
 
 router.get("/best-sellers", getBestSellingItems);
+router.get("/status-values", getOrderStatusValues);
 
 router.use(protect, adminOnly);
 

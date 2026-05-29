@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import MenuItem from "../models/MenuItem";
-import User from "../models/User";
+import User, { type OrderStatus } from "../models/User";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
 
 const validCategories = [
@@ -16,6 +16,31 @@ const validCategories = [
 
 const getErrorMessage = (error: unknown) => {
   return error instanceof Error ? error.message : "Something went wrong";
+};
+
+const normalizeOrderStatus = (status: unknown): OrderStatus | null => {
+  if (typeof status !== "string") return null;
+  const s = status.trim().toLowerCase();
+
+  const aliases: Record<string, OrderStatus> = {
+    pending: "pending",
+    paid: "paid",
+    complete: "completed",
+    completed: "completed",
+    competed: "completed",
+    canceled: "cancelled",
+    cancelled: "cancelled",
+  };
+
+  return aliases[s] ?? null;
+};
+
+export const getOrderStatusValues = (_req: Request, res: Response) => {
+  return res.json({
+    source: "adminController",
+    allowedStatuses: ["pending", "paid", "completed", "cancelled"],
+    // acceptedAliases: ["complete", "completed", "competed", "canceled", "cancelled"],
+  });
 };
 
 const parsePriceAmount = (value: string) => {
@@ -160,7 +185,7 @@ interface OrderUpdateBody {
     image?: string;
   }[];
   paymentMode?: "online" | "jazzcash";
-  status?: "pending" | "paid";
+  status?: OrderStatus;
 }
 
 interface EditableOrder {
@@ -177,7 +202,7 @@ interface EditableOrder {
   totalItems: number;
   totalAmount: number;
   paymentMode: "online" | "jazzcash";
-  status: "pending" | "paid";
+  status: OrderStatus;
   deliveryAddress: {
     house: string;
     street: string;
@@ -349,13 +374,18 @@ export const updateOrderForSuperAdmin = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid payment mode" });
     }
 
-    if (status && !["pending", "paid"].includes(status)) {
-      return res.status(400).json({ message: "Invalid order status" });
+    const normalizedStatus = status === undefined ? undefined : normalizeOrderStatus(status);
+    if (status !== undefined && !normalizedStatus) {
+      return res.status(400).json({
+        message: "Invalid order status",
+        receivedStatus: status,
+        allowedStatuses: ["pending", "paid", "completed", "cancelled"],
+      });
     }
 
     order.items = normalized.data;
     order.paymentMode = paymentMode ?? order.paymentMode;
-    order.status = status ?? order.status;
+    order.status = normalizedStatus ?? order.status;
 
     const totals = calculateOrderTotals(normalized.data);
     order.totalItems = totals.totalItems;

@@ -33,4 +33,5 @@ app.use("/api/recommendations", recommendationRoutes_1.default); // ← NEW
 app.use("/api/branches", branchRoutes_1.default);
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
+    console.log("Order statuses enabled: pending, paid, completed, cancelled");
 });

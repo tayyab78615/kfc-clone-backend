@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteAddress = exports.getAddresses = exports.addAddress = exports.logout = exports.refresh = exports.login = exports.signup = void 0;
+exports.updateName = exports.deleteAddress = exports.getAddresses = exports.addAddress = exports.logout = exports.refresh = exports.login = exports.signup = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -256,3 +256,23 @@ const deleteAddress = async (req, res) => {
     }
 };
 exports.deleteAddress = deleteAddress;
+const updateName = async (req, res) => {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ message: "Not authorized" });
+        }
+        const { name } = req.body;
+        if (!name || name.trim().length < 2) {
+            return res.status(400).json({ message: "Name must be at least 2 characters" });
+        }
+        const user = await User_1.default.findByIdAndUpdate(req.userId, { name: name.trim() }, { new: true, select: "name" }).lean();
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        return res.status(200).json({ name: user.name });
+    }
+    catch (error) {
+        return res.status(500).json({ message: getErrorMessage(error) });
+    }
+};
+exports.updateName = updateName;

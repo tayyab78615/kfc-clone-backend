@@ -19,4 +19,5 @@ router.post("/logout", authController_1.logout);
 router.post("/address", authMiddleware_1.protect, authController_1.addAddress);
 router.get("/addresses", authMiddleware_1.protect, authController_1.getAddresses);
 router.delete("/address/:id", authMiddleware_1.protect, authController_1.deleteAddress);
+router.patch("/name", authMiddleware_1.protect, authController_1.updateName);
 exports.default = router;
