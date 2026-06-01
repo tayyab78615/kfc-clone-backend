@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import User from "../models/User";
+import User, { type UserRole } from "../models/User";
 
 interface TokenPayload {
   id: string;
@@ -13,7 +13,7 @@ export type AuthenticatedRequest<
   ReqQuery = Record<string, unknown>,
 > = Request<P, ResBody, ReqBody, ReqQuery> & {
   userId?: string;
-  userRole?: "user" | "admin" | "superadmin";
+  userRole?: UserRole;
 };
 
 export const protect = async (
@@ -69,6 +69,18 @@ export const superAdminOnly = (
 ) => {
   if (req.userRole !== "superadmin") {
     return res.status(403).json({ message: "Super admin access required" });
+  }
+
+  return next();
+};
+
+export const riderOnly = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (req.userRole !== "rider") {
+    return res.status(403).json({ message: "Rider access required" });
   }
 
   return next();

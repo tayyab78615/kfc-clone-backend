@@ -11,6 +11,7 @@ import adminRoutes from "./routes/adminRoutes";
 import favoriteRoutes from "./routes/favoriteRoutes";
 import recommendationRoutes from "./routes/recommendationRoutes"; // ← NEW
 import branchRoutes from "./routes/branchRoutes";
+import riderRoutes from "./routes/riderRoutes";
 
 connectDB();
 
@@ -33,8 +34,9 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/recommendations", recommendationRoutes); // ← NEW
 app.use("/api/branches", branchRoutes);
+app.use("/api/rider", riderRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-  console.log("Order statuses enabled: pending, paid, completed, cancelled");
+  console.log("Order statuses enabled: pending, paid, on_delivery, delivered, completed, cancelled");
 });

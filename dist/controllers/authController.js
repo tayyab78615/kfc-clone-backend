@@ -93,17 +93,18 @@ const persistRefreshToken = async (userId, refreshToken) => {
 };
 const signup = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, accountType } = req.body;
         const exists = await User_1.default.findOne({ email });
         if (exists) {
             return res.status(400).json({ message: "User already exists" });
         }
+        const role = accountType === "rider" ? "rider" : "user";
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
         const user = await User_1.default.create({
             name,
             email,
             password: hashedPassword,
-            role: "user",
+            role,
         });
         const refreshToken = generateRefreshToken(String(user._id));
         await persistRefreshToken(String(user._id), refreshToken);
@@ -117,9 +118,12 @@ const signup = async (req, res) => {
 exports.signup = signup;
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, accountType } = req.body;
         const user = await User_1.default.findOne({ email });
         if (user && (await bcryptjs_1.default.compare(password, user.password))) {
+            if (accountType === "rider" && user.role !== "rider") {
+                return res.status(403).json({ message: "This account is not registered as a rider" });
+            }
             const refreshToken = generateRefreshToken(String(user._id));
             await persistRefreshToken(String(user._id), refreshToken);
             setRefreshTokenCookie(res, refreshToken);

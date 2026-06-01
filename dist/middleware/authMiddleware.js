@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.superAdminOnly = exports.adminOnly = exports.protect = void 0;
+exports.riderOnly = exports.superAdminOnly = exports.adminOnly = exports.protect = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = __importDefault(require("../models/User"));
 const protect = async (req, res, next) => {
@@ -45,3 +45,10 @@ const superAdminOnly = (req, res, next) => {
     return next();
 };
 exports.superAdminOnly = superAdminOnly;
+const riderOnly = (req, res, next) => {
+    if (req.userRole !== "rider") {
+        return res.status(403).json({ message: "Rider access required" });
+    }
+    return next();
+};
+exports.riderOnly = riderOnly;

@@ -31,14 +31,17 @@ const normalizeOrderStatus = (status) => {
         competed: "completed",
         canceled: "cancelled",
         cancelled: "cancelled",
+        on_delivery: "on_delivery",
+        "on delivery": "on_delivery",
+        delivered: "delivered",
     };
     return aliases[s] ?? null;
 };
 const getOrderStatusValues = (_req, res) => {
     return res.json({
         source: "adminController",
-        allowedStatuses: ["pending", "paid", "completed", "cancelled"],
-        acceptedAliases: ["complete", "completed", "competed", "canceled", "cancelled"],
+        allowedStatuses: ["pending", "paid", "on_delivery", "delivered", "completed", "cancelled"],
+        // acceptedAliases: ["complete", "completed", "competed", "canceled", "cancelled"],
     });
 };
 exports.getOrderStatusValues = getOrderStatusValues;
@@ -128,7 +131,7 @@ const updateAdminUser = async (req, res) => {
             req.userRole !== "superadmin") {
             return res.status(403).json({ message: "Only a super admin can edit another super admin" });
         }
-        if (role === "user" || role === "admin" || role === "superadmin") {
+        if (role === "user" || role === "admin" || role === "superadmin" || role === "rider") {
             user.role = role;
         }
         await user.save();
@@ -221,6 +224,8 @@ const getAllOrdersForSuperAdmin = async (req, res) => {
                                 paymentMode: "$orders.paymentMode",
                                 status: "$orders.status",
                                 deliveryAddress: "$orders.deliveryAddress",
+                                branch: "$orders.branch",
+                                rider: "$orders.rider",
                                 customerInfo: "$orders.customerInfo",
                                 createdAt: "$orders.createdAt",
                             },
@@ -277,7 +282,7 @@ const updateOrderForSuperAdmin = async (req, res) => {
             return res.status(400).json({
                 message: "Invalid order status",
                 receivedStatus: status,
-                allowedStatuses: ["pending", "paid", "completed", "cancelled"],
+                allowedStatuses: ["pending", "paid", "on_delivery", "delivered", "completed", "cancelled"],
             });
         }
         order.items = normalized.data;
@@ -307,6 +312,8 @@ const updateOrderForSuperAdmin = async (req, res) => {
                 paymentMode: order.paymentMode,
                 status: order.status,
                 deliveryAddress: order.deliveryAddress,
+                branch: order.branch,
+                rider: order.rider,
                 customerInfo: order.customerInfo,
                 createdAt: order.createdAt,
             },

@@ -15,6 +15,7 @@ const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const favoriteRoutes_1 = __importDefault(require("./routes/favoriteRoutes"));
 const recommendationRoutes_1 = __importDefault(require("./routes/recommendationRoutes")); // ← NEW
 const branchRoutes_1 = __importDefault(require("./routes/branchRoutes"));
+const riderRoutes_1 = __importDefault(require("./routes/riderRoutes"));
 (0, db_1.default)();
 const app = (0, express_1.default)();
 const port = process.env.PORT || "5000";
@@ -31,7 +32,8 @@ app.use("/api/admin", adminRoutes_1.default);
 app.use("/api/favorites", favoriteRoutes_1.default);
 app.use("/api/recommendations", recommendationRoutes_1.default); // ← NEW
 app.use("/api/branches", branchRoutes_1.default);
+app.use("/api/rider", riderRoutes_1.default);
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
-    console.log("Order statuses enabled: pending, paid, completed, cancelled");
+    console.log("Order statuses enabled: pending, paid, on_delivery, delivered, completed, cancelled");
 });

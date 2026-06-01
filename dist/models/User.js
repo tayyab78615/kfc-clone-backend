@@ -13,7 +13,7 @@ const userSchema = new mongoose_1.default.Schema({
     password: String,
     role: {
         type: String,
-        enum: ["user", "admin", "superadmin"],
+        enum: ["user", "admin", "superadmin", "rider"],
         default: "user",
     },
     refreshToken: String,
@@ -45,7 +45,7 @@ const userSchema = new mongoose_1.default.Schema({
             },
             status: {
                 type: String,
-                enum: ["pending", "paid", "completed", "cancelled"],
+                enum: ["pending", "paid", "on_delivery", "delivered", "completed", "cancelled"],
                 default: "paid",
             },
             orderId: {
@@ -57,6 +57,19 @@ const userSchema = new mongoose_1.default.Schema({
                 house: String,
                 street: String,
                 landmark: String,
+                latitude: Number,
+                longitude: Number,
+            },
+            branch: {
+                branchId: String,
+                name: String,
+                address: String,
+                distanceKm: Number,
+            },
+            rider: {
+                riderId: String,
+                name: String,
+                email: String,
             },
             customerInfo: {
                 name: String,

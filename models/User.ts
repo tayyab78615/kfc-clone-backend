@@ -17,7 +17,14 @@ interface OrderItem {
   image: string;
 }
 
-export type OrderStatus = "pending" | "paid" | "completed" | "cancelled";
+export type UserRole = "user" | "admin" | "superadmin" | "rider";
+export type OrderStatus =
+  | "pending"
+  | "paid"
+  | "on_delivery"
+  | "delivered"
+  | "completed"
+  | "cancelled";
 
 interface Order {
   _id?: mongoose.Types.ObjectId;
@@ -31,6 +38,19 @@ interface Order {
     house: string;
     street: string;
     landmark: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  branch?: {
+    branchId: string;
+    name: string;
+    address: string;
+    distanceKm?: number;
+  };
+  rider?: {
+    riderId: string;
+    name: string;
+    email: string;
   };
   customerInfo: {
     name: string;
@@ -65,7 +85,7 @@ export interface IUser extends mongoose.Document {
   name: string;
   email: string;
   password: string;
-  role: "user" | "admin" | "superadmin";
+  role: UserRole;
   refreshToken?: string;
   bucket: BucketItem[];
   orders: Order[];
@@ -85,7 +105,7 @@ const userSchema = new mongoose.Schema<IUser>(
     password: String,
     role: {
       type: String,
-      enum: ["user", "admin", "superadmin"],
+      enum: ["user", "admin", "superadmin", "rider"],
       default: "user",
     },
     refreshToken: String,
@@ -117,7 +137,7 @@ const userSchema = new mongoose.Schema<IUser>(
         },
         status: {
           type: String,
-          enum: ["pending", "paid", "completed", "cancelled"],
+          enum: ["pending", "paid", "on_delivery", "delivered", "completed", "cancelled"],
           default: "paid",
         },
         orderId: {
@@ -129,6 +149,19 @@ const userSchema = new mongoose.Schema<IUser>(
           house: String,
           street: String,
           landmark: String,
+          latitude: Number,
+          longitude: Number,
+        },
+        branch: {
+          branchId: String,
+          name: String,
+          address: String,
+          distanceKm: Number,
+        },
+        rider: {
+          riderId: String,
+          name: String,
+          email: String,
         },
         customerInfo: {
           name: String,

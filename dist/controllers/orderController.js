@@ -4,8 +4,40 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.trackOrder = exports.getMyOrders = exports.createOrder = void 0;
+const Branch_1 = __importDefault(require("../models/Branch"));
 const User_1 = __importDefault(require("../models/User"));
 const toNumberPrice = (price) => Number.parseInt(price.replace(/[^0-9]/g, ""), 10) || 0;
+const haversineKm = (lat1, lon1, lat2, lon2) => {
+    const radiusKm = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) ** 2;
+    return radiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+const findNearestBranch = async (latitude, longitude) => {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return null;
+    }
+    const branches = await Branch_1.default.find({ isActive: true }).lean();
+    if (branches.length === 0) {
+        return null;
+    }
+    return branches.reduce((best, branch) => {
+        const distanceKm = haversineKm(latitude, longitude, branch.latitude, branch.longitude);
+        if (!best || distanceKm < best.distanceKm) {
+            return {
+                branchId: String(branch._id),
+                name: branch.name,
+                address: branch.address,
+                distanceKm: Number(distanceKm.toFixed(2)),
+            };
+        }
+        return best;
+    }, null);
+};
 const generateOrderId = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let result = "KFC-";
@@ -41,6 +73,9 @@ const createOrder = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
         const orderId = generateOrderId();
+        const latitude = Number(deliveryAddress.latitude);
+        const longitude = Number(deliveryAddress.longitude);
+        const branch = await findNearestBranch(latitude, longitude);
         user.orders.push({
             orderId,
             items: normalizedItems,
@@ -48,7 +83,14 @@ const createOrder = async (req, res) => {
             totalAmount,
             paymentMode,
             status: "paid",
-            deliveryAddress,
+            deliveryAddress: {
+                house: deliveryAddress.house,
+                street: deliveryAddress.street,
+                landmark: deliveryAddress.landmark,
+                ...(Number.isFinite(latitude) ? { latitude } : {}),
+                ...(Number.isFinite(longitude) ? { longitude } : {}),
+            },
+            ...(branch ? { branch } : {}),
             customerInfo: {
                 name: user.name,
                 email: user.email,

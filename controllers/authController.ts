@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import User from "../models/User";
+import User, { type UserRole } from "../models/User";
 import bcrypt from "bcryptjs";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
@@ -8,6 +8,8 @@ interface AuthRequestBody {
   name?: string;
   email: string;
   password: string;
+  role?: UserRole;
+  accountType?: "user" | "rider";
 }
 
 interface TokenPayload {
@@ -102,7 +104,7 @@ const buildAuthResponse = (user: {
   _id: unknown;
   name: string;
   email: string;
-  role: "user" | "admin" | "superadmin";
+  role: UserRole;
   addresses?: any[];
 }) => {
   return {
@@ -126,19 +128,21 @@ export const signup = async (
   res: Response,
 ) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, accountType } = req.body;
     const exists = await User.findOne({ email });
 
     if (exists) {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    const role: UserRole = accountType === "rider" ? "rider" : "user";
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: "user",
+      role,
     });
 
     const refreshToken = generateRefreshToken(String(user._id));
@@ -156,10 +160,14 @@ export const login = async (
   res: Response,
 ) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, accountType } = req.body;
     const user = await User.findOne({ email });
 
     if (user && (await bcrypt.compare(password, user.password))) {
+      if (accountType === "rider" && user.role !== "rider") {
+        return res.status(403).json({ message: "This account is not registered as a rider" });
+      }
+
       const refreshToken = generateRefreshToken(String(user._id));
       await persistRefreshToken(String(user._id), refreshToken);
       setRefreshTokenCookie(res, refreshToken);
@@ -353,4 +361,3 @@ export const updateName = async (
     return res.status(500).json({ message: getErrorMessage(error) });
   }
 };
-
