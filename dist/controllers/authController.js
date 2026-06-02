@@ -125,7 +125,7 @@ const login = async (req, res) => {
                 return res.status(403).json({ message: "This account is not registered as a rider" });
             }
             if (accountType === "user" && user.role === "rider") {
-                return res.status(403).json({ message: "Please sign in from the rider option" });
+                return res.status(403).json({ message: "Please sign in from the rider app" });
             }
             const refreshToken = generateRefreshToken(String(user._id));
             await persistRefreshToken(String(user._id), refreshToken);

@@ -2,6 +2,7 @@ import express from "express";
 import { upload } from "../config/cloudinary";
 import {
   createAdminMenuItem,
+  createAdminUser,
   deleteAdminMenuItem,
   deleteOrderForSuperAdmin,
   getAdminMenuItems,
@@ -24,6 +25,7 @@ router.get("/status-values", getOrderStatusValues);
 router.use(protect, adminOnly);
 
 router.get("/users", getAdminUsers);
+router.post("/users", superAdminOnly, createAdminUser);
 router.put("/users/:id", updateAdminUser);
 
 router.get("/menu", getAdminMenuItems);

@@ -169,7 +169,7 @@ export const login = async (
       }
 
       if (accountType === "user" && user.role === "rider") {
-        return res.status(403).json({ message: "Please sign in from the rider option" });
+        return res.status(403).json({ message: "Please sign in from the rider app" });
       }
 
       const refreshToken = generateRefreshToken(String(user._id));

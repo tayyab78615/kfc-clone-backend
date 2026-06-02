@@ -114,6 +114,61 @@ export const getAdminUsers = async (_req: Request, res: Response) => {
   }
 };
 
+export const createAdminUser = async (req: Request, res: Response) => {
+  try {
+    const { name, email, password, role } = req.body as {
+      name?: string;
+      email?: string;
+      password?: string;
+      role?: "user" | "admin" | "superadmin" | "rider";
+    };
+
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ message: "Name is required" });
+    }
+    if (!email || !String(email).trim()) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const existing = await User.findOne({ email: normalizedEmail }).select("_id");
+    if (existing) {
+      return res.status(400).json({ message: "A user with that email already exists" });
+    }
+
+    const validRoles = ["user", "admin", "superadmin", "rider"] as const;
+    const assignedRole = validRoles.includes(role as typeof validRoles[number]) ? role! : "user";
+
+    const bcrypt = await import("bcryptjs");
+    const hashedPassword = await bcrypt.hash(String(password), 10);
+
+    const newUser = await User.create({
+      name: String(name).trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      role: assignedRole,
+    });
+
+    return res.status(201).json({
+      user: {
+        _id: String(newUser._id),
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        totalOrders: 0,
+        createdAt: newUser.createdAt,
+        updatedAt: newUser.updatedAt,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+
 export const updateAdminUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
